@@ -2,15 +2,11 @@ const express = require("express");
 const admin = require("firebase-admin");
 const { z } = require("zod");
 const cors = require("cors");
-const path = require("path"); 
-require("dotenv").config(); 
-
-
-console.log(`[DEPURAÇÃO] Diretório de execução do script (__dirname): ${__dirname}`);
-console.log(`[DEPURAÇÃO] Valor da variável GOOGLE_APPLICATION_CREDENTIALS: ${process.env.GOOGLE_APPLICATION_CREDENTIALS}`);
+const path = require("path");
+require("dotenv").config();
 
 const app = express();
-app.use(express.json()); 
+app.use(express.json());
 
 const corsOptions = {
   origin: process.env.FRONTEND_URL,
@@ -19,11 +15,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 try {
-  
   const serviceAccountPath = path.resolve(__dirname, process.env.GOOGLE_APPLICATION_CREDENTIALS);
-
-  console.log(`[DEPURAÇÃO] Tentando carregar a chave do Firebase de: ${serviceAccountPath}`);
-  
   const serviceAccount = require(serviceAccountPath);
 
   admin.initializeApp({
@@ -37,7 +29,7 @@ try {
     "ERRO CRÍTICO AO INICIALIZAR O FIREBASE ADMIN SDK:",
     error.message
   );
-  process.exit(1); 
+  process.exit(1);
 }
 
 const db = admin.firestore();
@@ -52,17 +44,14 @@ const agendamentoSchema = z.object({
 app.post("/api/agendamento", async (req, res) => {
   try {
     const agendamentoData = agendamentoSchema.parse(req.body);
-
     const dataCompleta = {
       ...agendamentoData,
-      dataExame: "2025-07-19", 
+      dataExame: "2025-07-19",
       status: "Pendente",
       criadoEm: admin.firestore.FieldValue.serverTimestamp(),
     };
-
     const docRef = await db.collection("agendamentos").add(dataCompleta);
-
-    console.log("Agendamento salvo com sucesso no Firestore. ID:", docRef.id);
+    console.log("Agendamento salvo com sucesso. ID:", docRef.id);
     return res.status(201).json({
       message: "Agendamento solicitado com sucesso!",
       agendamentoId: docRef.id,
@@ -75,9 +64,8 @@ app.post("/api/agendamento", async (req, res) => {
         details: error.flatten().fieldErrors,
       });
     }
-
-    console.error("Erro interno do servidor ao criar agendamento:", error);
-    return res.status(500).json({ error: "Ocorreu um erro interno. Tente novamente." });
+    console.error("Erro interno do servidor:", error);
+    return res.status(500).json({ error: "Ocorreu um erro interno." });
   }
 });
 
@@ -86,7 +74,5 @@ app.listen(PORT, () => {
   console.log(`Servidor backend rodando na porta ${PORT}`);
   if (process.env.FRONTEND_URL) {
     console.log(`Permitindo requisições de: ${process.env.FRONTEND_URL}`);
-  } else {
-    console.warn("A variável de ambiente FRONTEND_URL não está definida. O CORS pode bloquear requisições.");
   }
 });
